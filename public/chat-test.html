@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat Test Client</title>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .chat-container {
+            border: 1px solid #ccc;
+            padding: 20px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .message-list {
+            height: 300px;
+            overflow-y: auto;
+            border: 1px solid #eee;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+        .message {
+            margin-bottom: 10px;
+            padding: 5px;
+            border-radius: 5px;
+        }
+        .message.sent {
+            background-color: #e3f2fd;
+            margin-left: 20%;
+        }
+        .message.received {
+            background-color: #f5f5f5;
+            margin-right: 20%;
+        }
+        .input-container {
+            display: flex;
+            gap: 10px;
+        }
+        input, button {
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        button {
+            background-color: #2196f3;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #1976d2;
+        }
+        .typing-indicator {
+            color: #666;
+            font-style: italic;
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Chat Test Client</h1>
+    
+    <div class="chat-container">
+        <h2>Connection Status</h2>
+        <div id="connection-status">Disconnected</div>
+        
+        <h2>Authentication</h2>
+        <div class="input-container">
+            <input type="text" id="token-input" placeholder="Enter JWT token">
+            <button onclick="connect()">Connect</button>
+        </div>
+
+        <h2>Chat</h2>
+        <div class="input-container">
+            <input type="text" id="receiver-id" placeholder="Receiver ID">
+            <input type="text" id="property-id" placeholder="Property ID">
+        </div>
+        
+        <div class="message-list" id="message-list"></div>
+        
+        <div class="typing-indicator" id="typing-indicator" style="display: none;">
+            Someone is typing...
+        </div>
+        
+        <div class="input-container">
+            <input type="text" id="message-input" placeholder="Type a message...">
+            <button onclick="sendMessage()">Send</button>
+        </div>
+    </div>
+
+    <script>
+        let socket;
+        let isTyping = false;
+        let typingTimeout;
+
+        function connect() {
+            const token = document.getElementById('token-input').value;
+            if (!token) {
+                alert('Please enter a JWT token');
+                return;
+            }
+
+            // Disconnect existing socket if any
+            if (socket) {
+                socket.disconnect();
+            }
+
+            // Connect to Socket.IO server
+            socket = io('http://localhost:5000', {
+                auth: { token }
+            });
+
+            // Connection events
+            socket.on('connect', () => {
+                document.getElementById('connection-status').textContent = 'Connected';
+                document.getElementById('connection-status').style.color = 'green';
+            });
+
+            socket.on('disconnect', () => {
+                document.getElementById('connection-status').textContent = 'Disconnected';
+                document.getElementById('connection-status').style.color = 'red';
+            });
+
+            socket.on('connect_error', (error) => {
+                document.getElementById('connection-status').textContent = 'Connection Error: ' + error.message;
+                document.getElementById('connection-status').style.color = 'red';
+            });
+
+            // Chat events
+            socket.on('new_message', (message) => {
+                addMessage(message, 'received');
+            });
+
+            socket.on('message_sent', (message) => {
+                addMessage(message, 'sent');
+            });
+
+            socket.on('user_typing', (data) => {
+                if (data.isTyping) {
+                    document.getElementById('typing-indicator').style.display = 'block';
+                } else {
+                    document.getElementById('typing-indicator').style.display = 'none';
+                }
+            });
+
+            socket.on('messages_read', (data) => {
+                console.log('Messages marked as read:', data);
+            });
+
+            socket.on('error', (error) => {
+                console.error('Socket error:', error);
+                alert('Error: ' + error.message);
+            });
+        }
+
+        function sendMessage() {
+            const receiverId = document.getElementById('receiver-id').value;
+            const propertyId = document.getElementById('property-id').value;
+            const content = document.getElementById('message-input').value;
+
+            if (!receiverId || !propertyId || !content) {
+                alert('Please fill in all fields');
+                return;
+            }
+
+            socket.emit('send_message', {
+                receiverId,
+                propertyId,
+                content
+            });
+
+            document.getElementById('message-input').value = '';
+        }
+
+        function addMessage(message, type) {
+            const messageList = document.getElementById('message-list');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${type}`;
+            messageDiv.textContent = `${message.content}`;
+            messageList.appendChild(messageDiv);
+            messageList.scrollTop = messageList.scrollHeight;
+        }
+
+        // Handle typing indicator
+        document.getElementById('message-input').addEventListener('input', () => {
+            const receiverId = document.getElementById('receiver-id').value;
+            const propertyId = document.getElementById('property-id').value;
+
+            if (!receiverId || !propertyId) return;
+
+            if (!isTyping) {
+                isTyping = true;
+                socket.emit('typing', {
+                    receiverId,
+                    propertyId,
+                    isTyping: true
+                });
+            }
+
+            clearTimeout(typingTimeout);
+            typingTimeout = setTimeout(() => {
+                isTyping = false;
+                socket.emit('typing', {
+                    receiverId,
+                    propertyId,
+                    isTyping: false
+                });
+            }, 1000);
+        });
+    </script>
+</body>
+</html> 
