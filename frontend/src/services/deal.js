@@ -1,121 +1,103 @@
-import apiClient from './apiClient';
+import axios from 'axios';
+import { signAndSendDeal } from './key';
 
-// Map backend error messages to user-friendly messages
-const getFriendlyErrorMessage = (error) => {
-  const message = error.response?.data?.message || error.message;
-  switch (message) {
-    case 'Property not found':
-      return 'The property could not be found.';
-    case 'Property is not available for deals':
-    case /Property is not available for deals/.test(message):
-      return 'This property is not available for deals.';
-    case 'Another renter has an active deal for this property':
-      return 'A deal is already in progress for this property.';
-    case 'No pending deal found for this property, owner, and renter':
-    case 'Deal not found':
-      return 'No active deal found to sign.';
-    case 'Not authorized to sign this deal':
-      return 'You are not authorized to sign this deal.';
-    case 'You have already signed this deal':
-      return 'You have already signed this deal.';
-    default:
-      return 'An error occurred. Please try again.';
-  }
-};
+const baseUrl = 'http://localhost:5000';
 
 export const fetchDealStatus = async (propertyId, token, userId) => {
   try {
-    if (!propertyId || !token || !userId) {
-      throw new Error('Property ID, user ID, or authentication token missing');
-    }
-    console.log('Fetching deal status:', { propertyId, userId, timestamp: new Date().toISOString() });
-    const response = await apiClient.get('/deals', {
+    const response = await axios.get(`${baseUrl}/api/deals/status/${propertyId}`, {
       headers: { Authorization: `Bearer ${token}` },
+      params: { userId },
     });
-    const deals = response.data;
-    const deal = deals.find(d => 
-      (d.propertyId._id || d.propertyId).toString() === propertyId &&
-      (d.ownerId._id || d.ownerId).toString() === (d.ownerId._id || d.ownerId).toString() &&
-      (d.renterId._id || d.renterId).toString() === (d.renterId._id || d.renterId).toString()
-    );
-    if (!deal) {
-      console.log('No deal found:', { propertyId, userId, dealsCount: deals.length });
-      return {
-        id: null,
-        status: 'none',
-        signatures: { owner: { signed: false }, renter: { signed: false } },
-        renterId: null,
-        ownerId: null,
-      };
-    }
-    return {
-      id: deal._id,
-      status: deal.status,
-      signatures: deal.signatures || { owner: { signed: false }, renter: { signed: false } },
-      renterId: deal.renterId?._id || deal.renterId || null,
-      ownerId: deal.ownerId?._id || deal.ownerId || null,
-    };
+    return response.data;
   } catch (error) {
     console.error('Error fetching deal status:', {
       propertyId,
       userId,
+      error: error.message,
       status: error.response?.status,
-      message: error.response?.data?.message || error.message,
       timestamp: new Date().toISOString(),
     });
-    throw new Error(getFriendlyErrorMessage(error));
+    throw error;
   }
 };
 
-export const createDeal = async (dealData, token, userId) => {
+export const createDeal = async (dealData, token) => {
+  console.warn(dealData)
   try {
-    if (!dealData.propertyId || !dealData.ownerId) {
-      throw new Error('Missing required fields: propertyId or ownerId');
-    }
-    console.log('Creating deal:', {
-      dealData,
+    const { userId, propertyId, ownerId, renterId, terms, startDate, endDate, monthlyRent, securityDeposit } = dealData;
+    if (!userId || !propertyId || !ownerId || !renterId || !terms || !startDate || !endDate || !monthlyRent || !securityDeposit) {
+      throw new Error(`Missing required fields: ${[
+        !userId && 'userId',
+        !propertyId && 'propertyId',
+        !ownerId && 'ownerId',
+        !renterId && 'renterId',
+        !terms && 'terms',
+        !startDate && 'startDate',
+        !endDate && 'endDate',
+        !monthlyRent && 'monthlyRent',
+        !securityDeposit && 'securityDeposit',
+      ].filter(Boolean).join(', ')}`);
+    } 
+
+    // Use signAndSendDeal to sign and send the deal
+    const response = await signAndSendDeal(userId, dealData, token, true);
+
+    console.log('Deal created:', {
+      dealId: response,
+      propertyId,
       userId,
       timestamp: new Date().toISOString(),
     });
-    const response = await apiClient.post('/deals', dealData, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    return response.data;
+
+    return response;
   } catch (error) {
     console.error('Error creating deal:', {
-      userId,
+      propertyId: dealData.propertyId,
+      userId: dealData.userId,
+      error: error.message,
       status: error.response?.status,
-      message: error.response?.data?.message || error.message,
+      message: error.response?.data?.message,
       timestamp: new Date().toISOString(),
     });
-    throw new Error(getFriendlyErrorMessage(error));
+    throw error;
   }
 };
 
-export const signDeal = async ({ propertyId, ownerId, renterId }, token, userId) => {
+export const signDeal = async (dealId, dealData, token) => {
   try {
-    if (!propertyId || !ownerId || !renterId) {
-      throw new Error('Property ID, owner ID, or renter ID missing');
+    const { userId, propertyId, ownerId, renterId } = dealData;
+    if (!dealId || !userId || !propertyId || !ownerId || !renterId) {
+      throw new Error(`Missing required fields: ${[
+        !dealId && 'dealId',
+        !userId && 'userId',
+        !propertyId && 'propertyId',
+        !ownerId && 'ownerId',
+        !renterId && 'renterId',
+      ].filter(Boolean).join(', ')}`);
     }
-    console.log('Signing deal:', {
+
+    // Use signAndSendDeal to sign and send the deal signature
+    const response = await signAndSendDeal(userId, { ...dealData, dealId }, token, false);
+
+    console.log('Deal signed:', {
+      dealId,
       propertyId,
-      ownerId,
-      renterId,
       userId,
       timestamp: new Date().toISOString(),
     });
-    const response = await apiClient.put('/deals/sign', { propertyId, ownerId, renterId }, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    return response.data;
+
+    return response;
   } catch (error) {
     console.error('Error signing deal:', {
-      propertyId,
-      userId,
+      dealId,
+      propertyId: dealData.propertyId,
+      userId: dealData.userId,
+      error: error.message,
       status: error.response?.status,
-      message: error.response?.data?.message || error.message,
+      message: error.response?.data?.message,
       timestamp: new Date().toISOString(),
     });
-    throw new Error(getFriendlyErrorMessage(error));
+    throw error;
   }
 };

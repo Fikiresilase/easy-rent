@@ -46,11 +46,17 @@ const dealSchema = new mongoose.Schema({
   signatures: {
     owner: {
       signed: { type: Boolean, default: false },
-      signedAt: { type: Date }
+      signedAt: { type: Date },
+      signature: { // Added to store signature
+        signatureBase64: { type: String }
+      }
     },
     renter: {
       signed: { type: Boolean, default: false },
-      signedAt: { type: Date }
+      signedAt: { type: Date },
+      signature: { // Added to store signature
+        signatureBase64: { type: String }
+      }
     }
   },
   documents: [{
@@ -86,15 +92,14 @@ const dealSchema = new mongoose.Schema({
       type: Date,
       default: Date.now
     }
-  }]
+  }],
+  timestamp: { // Added for signature verification
+    type: String,
+    required: false
+  }
 }, {
   timestamps: true
 });
-
-// Indexes for faster queries
-dealSchema.index({ propertyId: 1, status: 1 });
-dealSchema.index({ ownerId: 1, status: 1 });
-dealSchema.index({ renterId: 1, status: 1 });
 
 const Deal = mongoose.model('Deal', dealSchema);
 

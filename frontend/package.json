@@ -10,11 +10,17 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@gebeta/tiles": "^1.1.4",
     "@headlessui/react": "^1.7.18",
     "@heroicons/react": "^2.1.1",
+    "@mui/icons-material": "^7.1.1",
+    "@mui/material": "^7.1.1",
     "axios": "^1.6.7",
+    "idb": "^8.0.3",
+    "leaflet-overpass-layer": "^2.9.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "react-leaflet": "^4.2.1",
     "react-router-dom": "^6.22.3",
     "socket.io-client": "^4.8.1",
     "zustand": "^4.5.2"

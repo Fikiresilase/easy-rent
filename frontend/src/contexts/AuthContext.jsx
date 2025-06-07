@@ -94,9 +94,14 @@ export function AuthProvider({ children }) {
     setToken(null)
     authService.logout()
   }
+  const currentUser =async (id) => {
+    const  user  = await authService.getCurrentUser(id)
+    return user
+    
+  }
 
   return (
-    <AuthContext.Provider value={{ user, token, isAuthenticated, loading, error, login, register, logout }}>
+    <AuthContext.Provider value={{ user,setUser, token, isAuthenticated, loading, error, login, register, logout,currentUser }}>
       {children}
     </AuthContext.Provider>
   )

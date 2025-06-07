@@ -1,175 +1,244 @@
-import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import React, { useState } from 'react'
 import { useAuth } from '../hooks/useAuth'
+import { useNavigate } from 'react-router-dom'
 
-export default function Register() {
+export default function EasyRentSignup() {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     password: '',
-    confirmPassword: '',
+    phone: '',
     role: 'user',
+    profile: {
+      avatar: '',
+      bio: '',
+      location: ''
+    }
   })
-  const [error, setError] = useState('')
-  const [isLoading, setIsLoading] = useState(false)
-  const { register } = useAuth()
+  const [frontId, setFrontId] = useState(null)
+  const [backId, setBackId] = useState(null)
+  const [avatarFile, setAvatarFile] = useState(null)
+  const [localSuccess, setLocalSuccess] = useState(false)
+  const { register, loading, error } = useAuth()
   const navigate = useNavigate()
 
   const handleChange = (e) => {
     const { name, value } = e.target
-    setFormData((prev) => ({ ...prev, [name]: value }))
+    if (name.includes('.')) {
+      const [parent, child] = name.split('.')
+      setFormData(prev => ({
+        ...prev,
+        [parent]: {
+          ...prev[parent],
+          [child]: value
+        }
+      }))
+    } else {
+      setFormData(prev => ({ ...prev, [name]: value }))
+    }
+  }
+
+  const handleAvatarChange = (e) => {
+    const file = e.target.files[0]
+    setAvatarFile(file)
+    if (file) {
+      const reader = new FileReader()
+      reader.onload = () => {
+        setFormData(prev => ({
+          ...prev,
+          profile: {
+            ...prev.profile,
+            avatar: reader.result
+          }
+        }))
+      }
+      reader.readAsDataURL(file)
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        profile: {
+          ...prev.profile,
+          avatar: ''
+        }
+      }))
+    }
   }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    setError('')
-
-    if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match')
-      return
+    setLocalSuccess(false)
+    const submitData = new FormData()
+    
+    submitData.append('name', formData.name)
+    submitData.append('email', formData.email)
+    submitData.append('password', formData.password)
+    submitData.append('phone', formData.phone)
+    submitData.append('role', formData.role)
+  
+    const profileData = {
+      ...formData.profile,
+      phone: formData.phone 
     }
+    submitData.append('profile', JSON.stringify(profileData))
+    
+    if (avatarFile) submitData.append('avatar', avatarFile)
+    if (frontId) submitData.append('frontId', frontId)
+    if (backId) submitData.append('backId', backId)
 
-    setIsLoading(true)
+    console.log('Submitting registration data:', {
+      name: formData.name,
+      email: formData.email,
+      phone: formData.phone,
+      role: formData.role,
+      hasPassword: !!formData.password,
+      hasAvatar: !!avatarFile,
+      hasFrontId: !!frontId,
+      hasBackId: !!backId
+    })
 
-    try {
-      const { confirmPassword, ...userData } = formData
-      const result = await register(userData)
-      if (result.success) {
-        navigate('/')
-      } else {
-        setError(result.error)
-      }
-    } catch (err) {
-      setError('An error occurred during registration')
-    } finally {
-      setIsLoading(false)
+    const result = await register(submitData)
+    if (result.success) {
+      setLocalSuccess(true)
+      setTimeout(() => navigate('/easyrent-login'), 1500)
     }
   }
 
   return (
-    <div className="flex min-h-full flex-1 flex-col justify-center px-6 py-12 lg:px-8">
-      <div className="sm:mx-auto sm:w-full sm:max-w-sm">
-        <h2 className="mt-10 text-center text-2xl font-bold leading-9 tracking-tight text-gray-900">
-          Create your account
-        </h2>
-      </div>
-
-      <div className="mt-10 sm:mx-auto sm:w-full sm:max-w-sm">
-        <form className="space-y-6" onSubmit={handleSubmit}>
-          {error && (
-            <div className="rounded-md bg-red-50 p-4">
-              <div className="text-sm text-red-700">{error}</div>
-            </div>
-          )}
-
+    <div className="w-full flex justify-center items-center py-12">
+      <div className="bg-white rounded-2xl shadow p-8 flex flex-col md:flex-row gap-8 w-full max-w-5xl">
+        <form className="flex-1 space-y-4 min-w-[320px]" onSubmit={handleSubmit}>
+          <h2 className="text-2xl font-bold mb-6">Sign up</h2>
+          {error && <div className="text-red-600 text-sm mb-2">{error}</div>}
+          {localSuccess && <div className="text-green-600 text-sm mb-2">Registration successful! Redirecting...</div>}
           <div>
-            <label htmlFor="name" className="block text-sm font-medium leading-6 text-gray-900">
-              Full name
-            </label>
-            <div className="mt-2">
-              <input
-                id="name"
-                name="name"
-                type="text"
-                autoComplete="name"
-                required
-                value={formData.name}
-                onChange={handleChange}
-                className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-primary-600 sm:text-sm sm:leading-6"
-              />
-            </div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+            <input 
+              type="text" 
+              name="name"
+              placeholder="Enter your name" 
+              value={formData.name} 
+              onChange={handleChange} 
+              className="w-full border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#3B5ED6]" 
+              required 
+            />
           </div>
-
           <div>
-            <label htmlFor="email" className="block text-sm font-medium leading-6 text-gray-900">
-              Email address
-            </label>
-            <div className="mt-2">
-              <input
-                id="email"
-                name="email"
-                type="email"
-                autoComplete="email"
-                required
-                value={formData.email}
-                onChange={handleChange}
-                className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-primary-600 sm:text-sm sm:leading-6"
-              />
-            </div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+            <input 
+              type="email" 
+              name="email"
+              placeholder="Enter your email" 
+              value={formData.email} 
+              onChange={handleChange} 
+              className="w-full border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#3B5ED6]" 
+              required 
+            />
           </div>
-
           <div>
-            <label htmlFor="password" className="block text-sm font-medium leading-6 text-gray-900">
-              Password
-            </label>
-            <div className="mt-2">
-              <input
-                id="password"
-                name="password"
-                type="password"
-                autoComplete="new-password"
-                required
-                value={formData.password}
-                onChange={handleChange}
-                className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-primary-600 sm:text-sm sm:leading-6"
-              />
-            </div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+            <input 
+              type="tel" 
+              name="phone"
+              placeholder="Enter your phone number" 
+              value={formData.phone} 
+              onChange={handleChange} 
+              className="w-full border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#3B5ED6]" 
+              required 
+            />
           </div>
-
           <div>
-            <label htmlFor="confirmPassword" className="block text-sm font-medium leading-6 text-gray-900">
-              Confirm password
-            </label>
-            <div className="mt-2">
-              <input
-                id="confirmPassword"
-                name="confirmPassword"
-                type="password"
-                autoComplete="new-password"
-                required
-                value={formData.confirmPassword}
-                onChange={handleChange}
-                className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-primary-600 sm:text-sm sm:leading-6"
-              />
-            </div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+            <input 
+              type="password" 
+              name="password"
+              placeholder="Enter your password" 
+              value={formData.password} 
+              onChange={handleChange} 
+              className="w-full border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#3B5ED6]" 
+              required 
+            />
           </div>
-
           <div>
-            <label htmlFor="role" className="block text-sm font-medium leading-6 text-gray-900">
-              I want to
-            </label>
-            <div className="mt-2">
-              <select
-                id="role"
-                name="role"
-                value={formData.role}
-                onChange={handleChange}
-                className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-primary-600 sm:text-sm sm:leading-6"
-              >
-                <option value="user">Rent a property</option>
-                <option value="owner">List my property</option>
-              </select>
-            </div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
+            <input 
+              type="text" 
+              name="profile.location"
+              placeholder="Enter your location" 
+              value={formData.profile.location} 
+              onChange={handleChange} 
+              className="w-full border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#3B5ED6]" 
+            />
           </div>
-
           <div>
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="flex w-full justify-center rounded-md bg-primary-600 px-3 py-1.5 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-primary-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 disabled:opacity-50"
-            >
-              {isLoading ? 'Creating account...' : 'Create account'}
-            </button>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Bio</label>
+            <textarea 
+              name="profile.bio"
+              placeholder="Tell us about yourself" 
+              value={formData.profile.bio} 
+              onChange={handleChange} 
+              className="w-full border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#3B5ED6]" 
+              rows="3"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Profile Picture</label>
+            <input 
+              type="file" 
+              accept="image/*" 
+              onChange={handleAvatarChange}
+              className="w-full border border-gray-300 rounded-md px-4 py-2 text-sm text-gray-700 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:bg-[#3B5ED6] file:text-white hover:file:bg-[#2746a3]"
+            />
+            {avatarFile && <span className="text-xs text-gray-500 mt-1">{avatarFile.name}</span>}
+          </div>
+          <button type="submit" disabled={loading} className="w-full bg-[#3B5ED6] text-white text-2xl rounded-md py-2 mt-2 hover:bg-[#2746a3] transition disabled:opacity-50">
+            {loading ? 'Signing up...' : 'Sign up'}
+          </button>
+          <div className="mt-4 text-base">
+            Already have an account? <a href="/easyrent-login" className="text-[#3B5ED6] underline">login</a>
           </div>
         </form>
-
-        <p className="mt-10 text-center text-sm text-gray-500">
-          Already have an account?{' '}
-          <Link to="/login" className="font-semibold leading-6 text-primary-600 hover:text-primary-500">
-            Sign in
-          </Link>
-        </p>
+        <div className="flex-1 flex flex-col items-center min-w-[320px]">
+          {formData.profile.avatar ? (
+            <img 
+              src={formData.profile.avatar} 
+              alt="Profile" 
+              className="rounded-lg w-full h-40 object-cover mb-4" 
+            />
+          ) : (
+            <div className="rounded-lg w-full h-40 bg-gray-100 flex items-center justify-center mb-4">
+              <span className="text-gray-400 text-sm">No profile picture selected</span>
+            </div>
+          )}
+          <div className="w-full flex gap-4 mb-2">
+            <label className="flex-1 flex flex-col items-center justify-center bg-gray-100 rounded-lg h-24 border border-dashed border-gray-300 cursor-pointer">
+              <input 
+                type="file" 
+                accept="image/*" 
+                className="hidden" 
+                onChange={e => setFrontId(e.target.files[0])} 
+              />
+              <svg className="w-8 h-8 text-gray-400 mb-1" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+              </svg>
+              <span className="text-xs text-gray-400">front of your id</span>
+              {frontId && <span className="text-xs text-gray-500 mt-1">{frontId.name}</span>}
+            </label>
+            <label className="flex-1 flex flex-col items-center justify-center bg-gray-100 rounded-lg h-24 border border-dashed border-gray-300 cursor-pointer">
+              <input 
+                type="file" 
+                accept="image/*" 
+                className="hidden" 
+                onChange={e => setBackId(e.target.files[0])} 
+              />
+              <svg className="w-8 h-8 text-gray-400 mb-1" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+              </svg>
+              <span className="text-xs text-gray-400">back of your id</span>
+              {backId && <span className="text-xs text-gray-500 mt-1">{backId.name}</span>}
+            </label>
+          </div>
+        </div>
       </div>
     </div>
   )
-} 
+}

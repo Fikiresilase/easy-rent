@@ -14,6 +14,8 @@ const propertyRoutes = require('./routes/property');
 const authRoutes = require('./routes/auth');  
 const userRoutes = require('./routes/user');
 const dealRoutes = require('./routes/deal');
+const keyRoutes = require('./routes/keys');
+const paymentRoutes = require('./routes/payment');
 const Property = require('./models/Property');
  
 
@@ -30,6 +32,7 @@ console.log('Environment variables check:', {
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your_default_jwt_secret_key_123';
 console.log('Using JWT secret:', {
+  env:process.env.JWT_SECRET, 
   isDefault: JWT_SECRET === 'your_default_jwt_secret_key_123',
   length: JWT_SECRET.length,
   timestamp: new Date().toISOString(),
@@ -250,6 +253,8 @@ app.use('/api/properties', propertyRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/deals', dealRoutes);
+app.use('/api/keys', keyRoutes);
+app.use('/api/payment', paymentRoutes);
 
 app.use((err, req, res, next) => {
   console.error('Server error:', {

@@ -33,9 +33,9 @@ export const logout = async () => {
   }
 }
 
-export const getCurrentUser = async () => {
+export const getCurrentUser = async (id) => {
   try {
-    const res = await apiClient.get('/auth/me')
+    const res = await apiClient.get('/auth/me',{id})
     return res.data // { user }
   } catch (error) {
     console.error('Get current user error:', error.response?.data || error.message)

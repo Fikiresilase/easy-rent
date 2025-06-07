@@ -1,24 +1,49 @@
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
-const { register, login, getCurrentUser } = require('../controllers/authController');
+const path = require('path');
+const {
+  register,
+  login,
+  getCurrentUser,
+  forgotPassword,
+  verifyOTP,
+  resetPassword,
+} = require('../controllers/authController');
 const auth = require('../middleware/auth');
 
 const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, 'uploads/')
+  destination: (req, file, cb) => {
+    cb(null, 'uploads/');
   },
-  filename: function (req, file, cb) {
-    cb(null, Date.now() + '-' + file.originalname)
-  }
+  filename: (req, file, cb) => {
+    cb(null, `${Date.now()}-${file.originalname}`);
+  },
 });
 
-const upload = multer({ storage: storage });
-router.post('/register', upload.fields([
+const fileFilter = (req, file, cb) => {
+  if (file.mimetype.startsWith('image/')) {
+    cb(null, true);
+  } else {
+    cb(new Error('Only image files are allowed'), false);
+  }
+};
+
+const upload = multer({
+  storage,
+  fileFilter,
+  limits: { fileSize: 50 * 1024 * 1024 },
+}).fields([
+  { name: 'profilePicture', maxCount: 1 },
   { name: 'frontId', maxCount: 1 },
-  { name: 'backId', maxCount: 1 }
-]), register);
+  { name: 'backId', maxCount: 1 },
+]);
+
+router.post('/register', upload, register);
 router.post('/login', login);
 router.get('/me', auth, getCurrentUser);
+router.post('/forgot-password', forgotPassword);
+router.post('/verify-otp', verifyOTP);
+router.post('/reset-password', resetPassword);
 
-module.exports = router; 
+module.exports = router;
