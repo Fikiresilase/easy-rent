@@ -1,13 +1,13 @@
 import axios from 'axios';
 import { signAndSendDeal } from './key';
 
-const baseUrl = 'http://localhost:5000';
+const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
-export const fetchDealStatus = async (renterId,ownerId,propertyId, token, userId) => {
+export const fetchDealStatus = async (renterId, ownerId, propertyId, token, userId) => {
   try {
     const response = await axios.get(`${baseUrl}/api/deals/status/${propertyId}`, {
       headers: { Authorization: `Bearer ${token}` },
-      params: { userId,renterId,ownerId,propertyId },
+      params: { userId, renterId, ownerId, propertyId },
     });
     return response.data;
   } catch (error) {
