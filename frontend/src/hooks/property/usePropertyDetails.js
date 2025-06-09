@@ -3,14 +3,14 @@ import { fetchPropertyById } from '../../services/property';
 import { fetchDealStatus } from '../../services/deal';
 
 export function usePropertyDetails(propertyId, token, userId) {
-  const [fetchedDeal,setFetchedDeal]=useState(null)
+  const [fetchedDeal, setFetchedDeal] = useState(null);
   const [property, setProperty] = useState(1);
-  const renterId = property.renterId
-  const ownerId= property.ownerId
+  const renterId = property.renterId;
+  const ownerId = property.ownerId;
   const [propertyFetched, setPropertyFetched] = useState(false);
   const [dealStatus, setDealStatus] = useState('none');
   const [error, setError] = useState('');
-  const baseUrl = 'http://localhost:5000';
+  const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
   const defaultImage = 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=400&q=80';
 
   useEffect(() => {
