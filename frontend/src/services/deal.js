@@ -3,15 +3,17 @@ import { signAndSendDeal } from './key';
 
 const baseUrl = 'http://localhost:5000';
 
-export const fetchDealStatus = async (propertyId, token, userId) => {
+export const fetchDealStatus = async (renterId,ownerId,propertyId, token, userId) => {
   try {
     const response = await axios.get(`${baseUrl}/api/deals/status/${propertyId}`, {
       headers: { Authorization: `Bearer ${token}` },
-      params: { userId },
+      params: { userId,renterId,ownerId,propertyId },
     });
     return response.data;
   } catch (error) {
     console.error('Error fetching deal status:', {
+      renterId,
+      ownerId,
       propertyId,
       userId,
       error: error.message,
@@ -67,6 +69,7 @@ export const createDeal = async (dealData, token) => {
 export const signDeal = async (dealId, dealData, token) => {
   try {
     const { userId, propertyId, ownerId, renterId } = dealData;
+    
     if (!dealId || !userId || !propertyId || !ownerId || !renterId) {
       throw new Error(`Missing required fields: ${[
         !dealId && 'dealId',

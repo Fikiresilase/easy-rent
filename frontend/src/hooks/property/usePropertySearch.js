@@ -21,7 +21,7 @@ export function usePropertySearch() {
     try {
       const params = {
         page: page,
-        limit: 9,
+        limit: 6,
       };
       if (category) params.type = category.toLowerCase(); // Normalize to lowercase
       if (minPrice) params.minPrice = parseFloat(minPrice);
@@ -53,6 +53,7 @@ export function usePropertySearch() {
       if (Array.isArray(data)) {
         fetchedProperties = data;
         total = data.length;
+        
       } else if (data.properties && Array.isArray(data.properties)) {
         fetchedProperties = data.properties;
         total = data.total || data.properties.length;
@@ -81,7 +82,8 @@ export function usePropertySearch() {
 
       setProperties(fetchedProperties);
       setFilteredProperties(fetchedProperties);
-      setTotalPages(Math.ceil(total / 9) || 1);
+      setTotalPages(Math.floor(total / 6) || 1);
+      console.error(total)
     } catch (err) {
       console.error('Error fetching properties:', {
         error: err.message,

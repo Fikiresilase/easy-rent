@@ -19,7 +19,7 @@ const createDeal = async (req, res) => {
 
     if (!propertyId || !ownerId || !startDate || !endDate || !monthlyRent || !securityDeposit || !terms || !signature) {
       console.warn('Missing required fields:', {
-        sinature,
+        signature,
         propertyId,
         ownerId,
         renterId,
@@ -59,15 +59,15 @@ const createDeal = async (req, res) => {
       propertyId,
       status: { $in: ['pending', 'completed'] },
     });
-    if (existingDeal) {
-      console.warn('Existing deal found:', {
+    if (existingDeal && !(existingDeal.signatures.owner.signed && existingDeal.signatures.renter.signed)) {
+      console.warn('Existing  found:', {
         propertyId,
         dealId: existingDeal._id,
         status: existingDeal.status,
         userId,
         timestampLog: new Date().toISOString(),
       });
-      return res.status(400).json({ message: 'An active deal already exists for this property' });
+      return res.json(existingDeal);
     }
 
     if (signature) {
@@ -102,7 +102,7 @@ const createDeal = async (req, res) => {
       status: 'pending',
       signatures: {
         owner: {
-          signed: isOwner && signature ? true : false,
+          signed: isOwner && signature ? true : 'false',
           signedAt: isOwner && signature ? new Date() : null,
           signature: isOwner && signature ? signature : null,
         },
@@ -190,7 +190,7 @@ const signDeal = async (req, res) => {
     let deal;
     if (isCreateDeal) {
       deal = await Deal.findOne({ propertyId, ownerId, renterId });
-      if (deal) {
+      if (deal && deal.signatures.owner.signed && deal.signatures.renter.signed) {
         console.warn('Existing deal found:', {
           propertyId,
           dealId: deal._id,
@@ -198,7 +198,7 @@ const signDeal = async (req, res) => {
           userId,
           timestampLog: new Date().toISOString(),
         });
-        return res.status(400).json({ message: 'An active deal already exists for this property, owner, and renter' });
+        return res.status(400).json({ message: 'An active deal already exists for this property, owner, and rentee' });
       }
 
       const property = await Property.findById(propertyId);
@@ -416,10 +416,12 @@ const signDeal = async (req, res) => {
 
 const getDealStatus = async (req, res) => {
   try {
-    const { propertyId } = req.params;
+    const { propertyId,renterId,ownerId } = req.query; 
     const userId = req.query.userId || req.user._id;
 
     console.log('Fetching deal status:', {
+      ownerId,
+      renterId,
       propertyId,
       userId,
       requesterId: req.user._id,
@@ -452,46 +454,19 @@ const getDealStatus = async (req, res) => {
       });
       return res.status(403).json({ message: 'Not authorized to view or create deals for this user' });
     }
-
+           console.log(ownerId,renterId)
     let deal = await Deal.findOne({
       propertyId,
-      $or: [{ ownerId: userId }, { renterId: userId }],
+      $or: [{ ownerId: ownerId }, { renterId: renterId }],
     })
-      .populate('propertyId')
-      .populate('ownerId', 'name email')
-      .populate('renterId', 'name email');
+      
 
     if (!deal) {
-      if (!['available', 'pending'].includes(property.status)) {
-        console.warn('Property not available for new deal:', {
-          propertyId,
-          status: property.status,
-          userId,
-          timestampLog: new Date().toISOString(),
-        });
-        return res.status(400).json({ message: `Property is not available for deals (status: ${property.status})` });
-      }
-
-      const conflictingDeal = await Deal.findOne({
-        propertyId,
-        status: { $in: ['pending', 'completed'] },
-      });
-      if (conflictingDeal) {
-        console.warn('Existing deal found:', {
-          propertyId,
-          dealId: conflictingDeal._id,
-          status: conflictingDeal.status,
-          userId,
-          timestampLog: new Date().toISOString(),
-        });
-        return res.status(400).json({ message: 'An active deal already exists for this property' });
-      }
-
-      deal = new Deal({
+      deal =  {
         propertyId,
         ownerId: property.ownerId,
-        renterId: isOwner ? null : userId,
-        status: 'pending',
+        renterId: renterId,
+        status: 'Deal',
         signatures: {
           owner: { signed: false, signedAt: null, signature: null },
           renter: { signed: false, signedAt: null, signature: null },
@@ -501,44 +476,42 @@ const getDealStatus = async (req, res) => {
         endDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1)),
         monthlyRent: property.price || 1000,
         securityDeposit: property.price || 1000,
-      });
+      };
+      console.log(deal,'kkk')
+      return res.json(deal);
+    }
+    else {
+      console.log(deal,'ccc')
+      return res.json(deal)
+    }
 
-      await deal.save();
-      console.log('New deal created:', {
-        dealId: deal._id,
+    const conflictingDeal = await Deal.findOne({
+      propertyId,
+      renterId,
+      ownerId,
+      status: { $in: ['pending', 'completed'] },
+    });
+    if (conflictingDeal) {
+      console.warn('Existing deal found:', {
         propertyId,
-        ownerId: deal.ownerId,
-        renterId: deal.renterId,
+        dealId: conflictingDeal._id,
+        status: conflictingDeal.status,
         userId,
         timestampLog: new Date().toISOString(),
       });
-
-      deal = await Deal.findById(deal._id)
-        .populate('propertyId')
-        .populate('ownerId', 'name email')
-        .populate('renterId', 'name email');
+      return res.status(400).json({ message: 'An active deal already exists for this property' });
     }
-
-    console.log('Deal status retrieved:', {
-      dealId: deal._id,
-      propertyId,
-      status: deal.status,
-      signatures: deal.signatures,
-      userId,
-      timestampLog: new Date().toISOString(),
-    });
-
-    res.json(deal);
-  } catch (error) {
+  }
+  catch (error) {
     console.error('Error fetching deal status:', {
       propertyId: req.params.propertyId,
       userId: req.query.userId || req.user?._id,
-      error: error.message,
+      error: error.stack,
       timestampLog: new Date().toISOString(),
     });
     res.status(500).json({ message: 'Error fetching deal status', error: error.message });
   }
-};
+}
 
 const getUserDeals = async (req, res) => {
   try {
@@ -559,9 +532,9 @@ const getUserDeals = async (req, res) => {
 
     res.json(deals);
   } catch (error) {
-    console.error('Error fetching deals:', {
+    console.log('Error fetching deals:', {
       userId: req.user._id,
-      error: error.message,
+      error: error,
       timestampLog: new Date().toISOString(),
     });
     res.status(500).json({ message: 'Error fetching deals', error: error.message });

@@ -1,7 +1,8 @@
 import React from 'react';
 
 export function Pagination({ page, totalPages, setPage }) {
-  if (totalPages <= 1) return null;
+  console.error(totalPages)
+  
 
   return (
     <div className="flex justify-center items-center mb-12">

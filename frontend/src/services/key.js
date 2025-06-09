@@ -298,7 +298,7 @@ export const signAndSendDeal = async (userId, dealData, token, isCreateDeal = tr
     console.error('Error signing/sending deal:', {
       userId,
       dealId: dealData.dealId || 'new',
-      error: error.response?.data?.message || error.message,
+      error: error.stack,
       status: error.response?.status,
       timestamp: new Date().toISOString(),
     });

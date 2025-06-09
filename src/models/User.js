@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
 const userSchema = new mongoose.Schema({
-  // Existing fields (unchanged, assumed based on authController.js)
+  
   name: { type: String, required: true },
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
@@ -12,14 +12,17 @@ const userSchema = new mongoose.Schema({
     avatar: String,
     frontId: String,
     backId: String,
-    // Other profile fields as per your model
+    
   },
-  // New fields for OTP
-  resetPasswordOTP: { type: String }, // Hashed OTP
-  resetPasswordExpires: { type: Date }, // OTP expiration
+  
+  resetPasswordOTP: { type: String }, 
+  resetPasswordExpires: { type: Date }, 
+  
+  registrationOTP: { type: String }, 
+  registrationOTPExpires: { type: Date }, 
 });
 
-// Hash password before saving
+
 userSchema.pre('save', async function (next) {
   if (!this.isModified('password')) return next();
   const salt = await bcrypt.genSalt(10);
@@ -27,7 +30,7 @@ userSchema.pre('save', async function (next) {
   next();
 });
 
-// Compare password
+
 userSchema.methods.comparePassword = async function (password) {
   return await bcrypt.compare(password, this.password);
 };

@@ -20,13 +20,7 @@ export function ChatHeader({ propertyTitle, dealStatus, handleDealClick, propert
           {propertyFetched ? propertyTitle : 'Loading...'}
         </h2>
       </div>
-      <button
-        onClick={handleDealClick}
-        className="px-3 py-1.5 bg-[#3B5ED6] text-white text-sm font-medium rounded-md hover:bg-indigo-700 transition disabled:opacity-50"
-        disabled={!propertyFetched}
-      >
-        {dealStatus === 'none' ? 'View Deal' : dealStatus}
-      </button>
+      
     </div>
   );
 }

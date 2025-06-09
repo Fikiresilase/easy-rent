@@ -32,7 +32,7 @@ function App() {
         <Route path="easyrent-editPost/:propertyId" element={<EasyRentEditProperty />} />
         <Route path="easyrent-post" element={<EasyRentPost />} />
         <Route path="easyrent-history" element={<EasyRentHistory />} />
-        <Route path="easyrent-deal-status/:propertyId" element={<EasyRentDealStatus />} />
+        <Route path="easyrent-deal-status/:propertyId/:otherUserId?" element={<EasyRentDealStatus />} />
         <Route path="propertyInquirers/:propertyId" element={<PropertyInquirers />} />
         <Route path="easyrent-chat/:propertyId" element={<EasyRentChat />} />
         <Route path="login" element={<Login />} />

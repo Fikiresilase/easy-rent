@@ -29,7 +29,9 @@ export default function PropertyMap({
   defaultImage,
   searchRadius,
   setSearchRadius,
-}) {
+})
+
+{
   return (
     <div
       className={`mb-0 bg-white border border-gray-200 rounded-xl shadow-lg p-6 transition-all duration-300 ${
@@ -136,9 +138,9 @@ export default function PropertyMap({
                     <button
                       className="w-full bg-gradient-to-r from-indigo-500 to-indigo-600 text-white py-1.5 px-3 rounded-md shadow-sm hover:from-indigo-600 hover:to-indigo-700 transition-all text-sm"
                       onClick={() => handlePropertyClick(property)}
-                      title={user && user.id === property.ownerId._id ? 'Edit this property' : 'Chat about this property'}
+                      title={user && user.id === property.ownerId ? 'Edit this property' : 'Chat about this property'}
                     >
-                      {user && user.id === property.ownerId._id ? 'Edit Property' : 'Chat'}
+                      {user && user.id === property.ownerId ? 'Edit Property' : 'Chat'}
                     </button>
                   </div>
                 </Popup>

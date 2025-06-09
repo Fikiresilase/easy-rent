@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { createDeal, signDeal } from '../../services/deal';
+import { createDeal, fetchDealStatus, signDeal } from '../../services/deal';
 
-export function useDeal({ property, propertyId, userId, token, dealStatus, propertyFetched }) {
+export function useDeal({ renterId, property, propertyId, userId, token, dealStatus, propertyFetched }) {
   const navigate = useNavigate();
   const [deal, setDeal] = useState({
     id: null,
@@ -18,6 +18,8 @@ export function useDeal({ property, propertyId, userId, token, dealStatus, prope
   const [modalOpen, setModalOpen] = useState(false);
   const [isOwner, setIsOwner] = useState(false);
   const [selectedRenterId, setSelectedRenterId] = useState(null);
+  const [loggedInUserStatus, setLoggedInUserStatus] = useState('No Deal');
+  const [otherUserStatus, setOtherUserStatus] = useState('No Deal');
 
   // Sync deal status and isOwner
   useEffect(() => {
@@ -30,6 +32,47 @@ export function useDeal({ property, propertyId, userId, token, dealStatus, prope
       }));
     }
   }, [propertyFetched, property, dealStatus, userId, propertyId]);
+
+  // Fetch user statuses
+  useEffect(() => {
+    const getUserStatus = async (userId, setter) => {
+      if (!userId || !propertyId || !token) {
+        setter('No Deal');
+        return;
+      }
+      try {
+        console.warn(renterId)
+        const dealData = await fetchDealStatus(renterId, property.ownerId, propertyId, token, userId);
+        console.error(dealData);
+        if (dealData.status === 'none') {
+          setter('No Deal');
+          return;
+        }
+        const isSigned = userId === (dealData.ownerId?._id || dealData.ownerId)
+          ? dealData.signatures.owner.signed
+          : userId === (dealData.renterId?._id || dealData.renterId)
+          ? dealData.signatures.renter.signed
+          : false;
+        setter(isSigned ? 'Done' : 'Pending');
+      } catch (err) {
+        console.error('Error fetching user status:', {
+          userId,
+          propertyId,
+          error: err.message,
+          timestamp: new Date().toISOString(),
+        });
+        setter('No Deal');
+      }
+    };
+
+    getUserStatus(userId, setLoggedInUserStatus);
+    const otherUserId = isOwner ? deal.renterId : deal.ownerId;
+    if (otherUserId) {
+      getUserStatus(otherUserId, setOtherUserStatus);
+    } else {
+      setOtherUserStatus('No Deal');
+    }
+  }, [userId, isOwner, deal.renterId, deal.ownerId, propertyId, token, renterId, property?.ownerId]);
 
   // Handle deal creation/signing
   const handleMakeDeal = async () => {
@@ -52,6 +95,7 @@ export function useDeal({ property, propertyId, userId, token, dealStatus, prope
     try {
       console.log('Handling deal:', { propertyId, userId, isOwner, dealId: deal.id || 'new', timestamp: new Date().toISOString() });
       let updatedDeal;
+      
       if (deal.status === 'none' || !deal.id) {
         const renterId = isOwner ? selectedRenterId : userId;
         if (isOwner && !renterId) {
@@ -59,6 +103,7 @@ export function useDeal({ property, propertyId, userId, token, dealStatus, prope
           setModalOpen(false);
           return;
         }
+        console.warn(selectedRenterId,renterId)
         const dealData = {
           userId,
           propertyId,
@@ -71,19 +116,20 @@ export function useDeal({ property, propertyId, userId, token, dealStatus, prope
           terms: 'Standard lease agreement',
           timestamp: new Date().toISOString(),
         };
-        console.warn(dealData)
         updatedDeal = await createDeal(dealData, token);
-        if (!updatedDeal?._id) {
-          throw new Error('Invalid deal response: missing ID');
-        }
-      } else {
+
+        console.error(updatedDeal);
+      }
+      if (updatedDeal) {
+        console.error('SELECTED ID', selectedRenterId);
+        const ownerId = property.ownerId
         const dealData = {
           userId,
           propertyId: deal.propertyId || propertyId,
-          ownerId: deal.ownerId?._id?.toString() || deal.ownerId,
-          renterId: deal.renterId?._id?.toString() || deal.renterId || selectedRenterId,
+          ownerId: ownerId.toString() || deal.ownerId,
+          renterId: renterId,
         };
-        updatedDeal = await signDeal(deal.id, dealData, token);
+        updatedDeal = await signDeal(updatedDeal._id, dealData, token);
       }
 
       setDeal({
@@ -121,24 +167,6 @@ export function useDeal({ property, propertyId, userId, token, dealStatus, prope
     }
   };
 
-  // Get user status
-  const getUserStatus = (userId) => {
-    if (deal.status === 'none') return 'No Deal';
-    const isSigned = userId === (deal.ownerId?._id || deal.ownerId)
-      ? deal.signatures.owner.signed
-      : userId === (deal.renterId?._id || deal.renterId)
-      ? deal.signatures.renter.signed
-      : false;
-    return isSigned ? 'Done' : 'Pending';
-  };
-
-  const loggedInUserStatus = getUserStatus(userId);
-  const otherUserId = isOwner ? deal.renterId : deal.ownerId;
-  const otherUserStatus = getUserStatus(otherUserId);
-  const canMakeDeal = propertyFetched && !deal.error &&
-    ['available', 'pending'].includes(property?.status) &&
-    (deal.status === 'none' || !deal.signatures[userId === (deal.ownerId?._id || deal.ownerId) ? 'owner' : 'renter'].signed);
-
   // Calculate progress
   const progress = deal.status === 'completed' ? 100 :
     deal.signatures.owner.signed && deal.signatures.renter.signed ? 100 :
@@ -154,7 +182,9 @@ export function useDeal({ property, propertyId, userId, token, dealStatus, prope
     handleMakeDeal,
     loggedInUserStatus,
     otherUserStatus,
-    canMakeDeal,
+    canMakeDeal: propertyFetched && !deal.error &&
+      ['available', 'pending'].includes(property?.status) &&
+      (deal.status === 'none' || !deal.signatures[userId === (deal.ownerId?._id || deal.ownerId) ? 'owner' : 'renter'].signed),
     progress,
     dealError: deal.error,
   };

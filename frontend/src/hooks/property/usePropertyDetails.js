@@ -3,7 +3,10 @@ import { fetchPropertyById } from '../../services/property';
 import { fetchDealStatus } from '../../services/deal';
 
 export function usePropertyDetails(propertyId, token, userId) {
+  const [fetchedDeal,setFetchedDeal]=useState(null)
   const [property, setProperty] = useState(1);
+  const renterId = property.renterId
+  const ownerId= property.ownerId
   const [propertyFetched, setPropertyFetched] = useState(false);
   const [dealStatus, setDealStatus] = useState('none');
   const [error, setError] = useState('');
@@ -92,7 +95,8 @@ export function usePropertyDetails(propertyId, token, userId) {
           token: token.substring(0, 20) + '...',
           timestamp: new Date().toISOString(),
         });
-        const response = await fetchDealStatus(propertyId, token, userId);
+        const response = await fetchDealStatus(renterId, ownerId, propertyId, token, userId);
+        setFetchedDeal(response)
         const status = response?.status || 'none';
         setDealStatus(status);
         console.log('Deal status set:', {
@@ -116,6 +120,7 @@ export function usePropertyDetails(propertyId, token, userId) {
   }, [propertyId, token, userId]);
 
   return {
+    fetchedDeal,
     property,
     propertyFetched,
     dealStatus,

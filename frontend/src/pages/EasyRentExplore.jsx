@@ -101,11 +101,13 @@ export default function EasyRentExplore() {
 
   const handlePropertyClick = (property) => {
     console.error(property)
-    if (user && user.id === property.ownerId._id) {
+    if (user && user.id === property.ownerId) {
+      console.error(property)
       navigate(`/easyrent-editPost/${property._id}`);
     } else {
       
-navigate(`/easyrent-chat/${property._id}`);
+      navigate(`/easyrent-chat/${property._id}`);
+      
     }
   };
 
@@ -196,9 +198,9 @@ navigate(`/easyrent-chat/${property._id}`);
           ))
         )}
       </div>
-      {displayTotalPages > 1 && (
-        <Pagination page={page} totalPages={displayTotalPages} setPage={setPage} />
-      )}
+      
+        <Pagination page={page} totalPages={2} setPage={setPage} />
+      
     </div>
   );
 }

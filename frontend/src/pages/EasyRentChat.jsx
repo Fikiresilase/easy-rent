@@ -31,7 +31,7 @@ export default function EasyRentChat() {
 
   const handleDealClick = () => {
     console.log('Navigating to deal status:', { propertyId, timestamp: new Date().toISOString() });
-    navigate(`/easyrent-deal-status/${propertyId}`);
+    navigate(user.id===property.ownerId ?`/easyrent-deal-status/${propertyId}/${state.receiverId}`:`/easyrent-deal-status/${propertyId}`);
   };
 
   useEffect(() => {

@@ -9,6 +9,7 @@ const {
   forgotPassword,
   verifyOTP,
   resetPassword,
+  sendOtp,
 } = require('../controllers/authController');
 const auth = require('../middleware/auth');
 
@@ -43,6 +44,7 @@ router.post('/register', upload, register);
 router.post('/login', login);
 router.get('/me', auth, getCurrentUser);
 router.post('/forgot-password', forgotPassword);
+router.post('/send-otp', sendOtp);
 router.post('/verify-otp', verifyOTP);
 router.post('/reset-password', resetPassword);
 
