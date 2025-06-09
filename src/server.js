@@ -18,6 +18,7 @@ const keyRoutes = require('./routes/keys');
 const paymentRoutes = require('./routes/payment');
 const Property = require('./models/Property');
 const {transporter}= require('./controllers/authController')
+const { sendEmail, emailTemplates } = require('./services/emailService');
  
 
 dotenv.config();
@@ -183,26 +184,16 @@ io.on('connection', (socket) => {
           const messagePreview = newMessage.content.length > 100
             ? newMessage.content.slice(0, 100) + '...'
             : newMessage.content;
-          const mailOptions= {
-              from: '"MuluCareer" <yenatcreation@gmail.com>',
-              to: newMessage.receiverId.email,
-              subject: 'You Have a New Message on Easy Rent',
-              text: `Hi, you have received a new message from ${senderName}: ${messagePreview}`,
-              html: `
-                <h2>New Message Received</h2>
-                <p>You have a new message from <strong>${senderName}</strong>:</p>
-                <blockquote style="color:#444;border-left:3px solid #ccc;padding-left:10px;">
-                  ${messagePreview}
-                </blockquote>
-                <p><a href="http://localhost:3000/chat">Click here to reply</a></p>
-                <p style="font-size:small;color:#999;">This is an automated message from Easy Rent.</p>
-              `,
-            }
-          await transporter.sendMail(mailOptions);
-          console.log(`email sent to the user ${newMessage.receiverId.email}, to notify new message!`)
+          
+          await sendEmail(
+            newMessage.receiverId.email,
+            emailTemplates.newMessage,
+            { senderName, messagePreview }
+          );
+          console.log(`email sent to the user ${newMessage.receiverId.email}, to notify new message!`);
         }
       } catch (error) {
-        console.warn(`problem while sending email, ${error}`)
+        console.warn(`problem while sending email, ${error}`);
       }
 
       // Log clients map for debugging

@@ -1,19 +1,9 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
-const nodemailer = require('nodemailer');
 const bcrypt = require('bcryptjs');
+const { sendEmail, emailTemplates } = require('../services/emailService');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your_default_jwt_secret_key_123';
-
-const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
-  port: 465,
-  secure: true,
-  auth: {
-    user: 'yenatcreation@gmail.com',
-    pass: 'kvweabgevsrnewqv',
-  },
-});
 
 const sendOtp = async (req, res) => {
   try {
@@ -38,20 +28,7 @@ const sendOtp = async (req, res) => {
       { upsert: true }
     );
 
-    const mailOptions = {
-      from: '"MuluCareer" <yenatcreation@gmail.com>',
-      to: email,
-      subject: 'Registration OTP',
-      text: `Your OTP for registration is: ${otp}\nThis OTP is valid for 10 minutes.`,
-      html: `
-        <h2>Registration Verification</h2>
-        <p>Your OTP for registration is: <strong>${otp}</strong></p>
-        <p>This OTP is valid for 10 minutes.</p>
-        <p>If you did not request this, please ignore this email.</p>
-      `,
-    };
-
-    await transporter.sendMail(mailOptions);
+    await sendEmail(email, emailTemplates.registrationOTP, otp);
     res.json({ success: true, message: 'OTP sent to your email' });
   } catch (error) {
     console.error('Send OTP error:', error);
@@ -204,20 +181,7 @@ const forgotPassword = async (req, res) => {
     user.resetPasswordExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
     await user.save();
 
-    const mailOptions = {
-      from: '"MuluCareer" <yenatcreation@gmail.com>',
-      to: user.email,
-      subject: 'Password Reset OTP',
-      text: `Your OTP for password reset is: ${otp}\nThis OTP is valid for 10 minutes.`,
-      html: `
-        <h2>Password Reset Request</h2>
-        <p>Your OTP for password reset is: <strong>${otp}</strong></p>
-        <p>This OTP is valid for 10 minutes.</p>
-        <p>If you did not request this, please ignore this email.</p>
-      `,
-    };
-
-    await transporter.sendMail(mailOptions);
+    await sendEmail(email, emailTemplates.passwordResetOTP, otp);
     res.json({ message: 'OTP sent to your email' });
   } catch (error) {
     console.error('Forgot password error:', error);
@@ -303,5 +267,4 @@ module.exports = {
   verifyOTP,
   resetPassword,
   sendOtp,
-  transporter
 };
