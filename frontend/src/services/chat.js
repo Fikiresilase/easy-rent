@@ -75,7 +75,7 @@ export const initializeSocket = async (token) => {
     return null;
   }
 
-  const socketUrl = import.meta.env.VITE_WS_URL || 'http://localhost:5000';
+  const socketUrl = import.meta.env.VITE_WS_URL || 'ws://localhost:5000';
   console.log('Initializing Socket.IO connection:', {
     socketUrl,
     userId: tokenPayload.userId,
